@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDoS Attack Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        input[type="file"] {
+            display: block;
+            margin: 20px 0;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        table th {
+            background-color: #007BFF;
+            color: white;
+        }
+        table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+    </style>
+    <script>
+        async function analyzeTraffic() {
+            const fileInput = document.getElementById('trafficFile');
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const resultContainer = document.getElementById('result');
+            const detailedResultsContainer = document.getElementById('detailedResults');
+            resultContainer.textContent = "Analyzing...";
+            detailedResultsContainer.innerHTML = "";
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    resultContainer.textContent = `Error: ${errorData.error}`;
+                    return;
+                }
+
+                const result = await response.json();
+                resultContainer.textContent = `Classification: ${result.classification} (Confidence: ${result.confidence})`;
+
+                // Create and display a summary
+                const summaryText = Object.entries(result.summary)
+                    .map(([key, value]) => `<p>${key}: ${value}</p>`)
+                    .join('');
+                detailedResultsContainer.innerHTML = `<h3>Summary</h3>${summaryText}`;
+
+                // Generate a table for detailed results
+                if (result.details && result.details.length > 0) {
+                    const table = document.createElement('table');
+                    const thead = document.createElement('thead');
+                    const tbody = document.createElement('tbody');
+
+                    // Add table headers
+                    const headers = Object.keys(result.details[0]);
+                    const headerRow = document.createElement('tr');
+                    headers.forEach(header => {
+                        const th = document.createElement('th');
+                        th.textContent = header;
+                        headerRow.appendChild(th);
+                    });
+                    thead.appendChild(headerRow);
+
+                    // Add table rows
+                    result.details.forEach(row => {
+                        const tableRow = document.createElement('tr');
+                        headers.forEach(header => {
+                            const td = document.createElement('td');
+                            td.textContent = row[header];
+                            tableRow.appendChild(td);
+                        });
+                        tbody.appendChild(tableRow);
+                    });
+
+                    table.appendChild(thead);
+                    table.appendChild(tbody);
+                    detailedResultsContainer.appendChild(table);
+                }
+            } catch (error) {
+                resultContainer.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>DDoS Attack Detection</h1>
+    <div class="container">
+        <p>Upload a network traffic file to analyze:</p>
+        <input type="file" id="trafficFile" accept=".pcap,.pcapng,.csv" />
+        <button onclick="analyzeTraffic()">Analyze</button>
+
+        <div class="result">
+            <h3>Result</h3>
+            <p id="result">No analysis performed yet.</p>
+        </div>
+
+        <div class="result">
+            <h3>Detailed Results</h3>
+            <div id="detailedResults"></div>
+        </div>
+    </div>
+</body>
+</html>
